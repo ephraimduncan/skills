@@ -8,6 +8,7 @@ Personal agent skills, maintained here and symlinked into the local skill direct
 | --- | --- |
 | [artifacts-publish](artifacts-publish/SKILL.md) | Publish generated HTML reports to [artifacts.duncan.land](https://artifacts.duncan.land) for shareable links. |
 | [fable-orchestrator](fable-orchestrator/SKILL.md) | Take an idea from interview to shipped PR inside herdr: spec, plan, implement, review, ship. |
+| [pr-canvas](pr-canvas/SKILL.md) | Explain what a PR or branch changed vs its base as a self-contained HTML briefing with before/after visuals. |
 | [writing-better-tests](writing-better-tests/SKILL.md) | Write tests that catch real breaks and skip tests that catch nothing; mock discipline and mutation checks. |
 
 ## Layout
