@@ -92,6 +92,19 @@ await tab.evaluate(() => {
   };
   window.__clearAnnotations = () =>
     document.querySelectorAll('.__annotation').forEach(d => d.remove());
+  window.__annotationBounds = () => {
+    // Union of every annotation box AND its chip. Chips are absolutely
+    // positioned and stick out past the box rect (especially `right`/`bottom`),
+    // so a clip computed from the target element alone slices them off.
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    document.querySelectorAll('.__annotation').forEach(box => {
+      for (const rect of [box.getBoundingClientRect(), box.firstChild.getBoundingClientRect()]) {
+        l = Math.min(l, rect.left); t = Math.min(t, rect.top);
+        r = Math.max(r, rect.right); b = Math.max(b, rect.bottom);
+      }
+    });
+    return { x: l + scrollX, y: t + scrollY, width: r - l, height: b - t };
+  };
 });
 ```
 
@@ -131,10 +144,18 @@ const rect = await tab.evaluate(() => {
   const el = [...document.querySelectorAll('pre')].find(p => p.textContent.includes('plugins install'));
   window.__annotate(el, 'Install command');
   const r = el.getBoundingClientRect();
-  return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height };
+  const a = window.__annotationBounds();   // includes chip overhang — REQUIRED for the clip
+  const left = Math.min(r.left + scrollX, a.x);
+  const top = Math.min(r.top + scrollY, a.y);
+  return {
+    x: left,
+    y: top,
+    width: Math.max(r.right + scrollX, a.x + a.width) - left,
+    height: Math.max(r.bottom + scrollY, a.y + a.height) - top,
+  };
 });
 await new Promise(r => setTimeout(r, 400));
-const pad = { top: 72, side: 48, bottom: 48 };   // extra top room for the chip
+const pad = { top: 48, side: 48, bottom: 48 };   // context only — chips are already inside the rect
 const out = `${process.env.TMPDIR}/annotated-crop.png`;
 await page.screenshot({
   path: out,   // raw page.screenshot returns a buffer; give it a path so the PNG lands on disk
@@ -149,7 +170,8 @@ return out;
 ```
 
 - `clip` is in CSS pixels; the 2x device scale still applies, so crops stay retina-sharp.
-- Keep ~48px of context on each side (72px above for the chip). A crop so tight the reader can't tell what page they're on is too tight.
+- Keep ~48px of context on each side. A crop so tight the reader can't tell what page they're on is too tight.
+- Chips overhang the box — ALWAYS build the clip from `__annotationBounds()` unioned with the target rect, never from the target element alone. A `right` chip cropped to "Ope…" is the classic failure.
 - One section per crop. Two distant annotated areas → two crops, not one tall shot.
 
 ### 5. Publish (content-type gotcha)
