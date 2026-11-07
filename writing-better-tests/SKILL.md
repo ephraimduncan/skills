@@ -1,13 +1,19 @@
 ---
 name: writing-better-tests
-description: "Write tests that catch real breaks and skip tests that catch nothing. Use when writing or changing tests, adding mocks, fixing failing tests, or tempted to add test-only methods to production code. Also use to decide whether code deserves a test at all — not everything does."
+description: "Decide whether a change must have a test, and write only tests that catch real breaks in logic. Use when deciding whether to add a test, writing or changing tests, adding mocks, fixing failing tests, or tempted to add test-only methods to production code."
 ---
 
 # Writing Better Tests
 
-A test exists to catch a specific break. Tests must verify real behavior, not mock behavior — mocks are a means to isolate, not the thing being tested.
+For most changes, a new test is not necessary. A test is for logic that can break: a branch, a calculation, parsed outside input, concurrency, money, auth, or data loss. Add a test only for that logic, or when the user asks for one.
 
-Two principles govern everything here:
+## When a Test Earns Its Place
+
+A change to config, styles, themes, colors, copy, static data, or the output of a third-party library ships with the existing checks and no new test. Trivial code is the same: a constructor, getter, constant, or plain forwarding earns a test only when it validates, normalizes, defaults, derives, enforces, or causes a side effect.
+
+A test written to show work, fill a PR, or satisfy a checklist catches nothing, and it costs maintenance and CI time on every run. When a change has no logic that can break, the change is complete without a test.
+
+A test that earns its place obeys two principles:
 
 ```
 1. Every test names the break it catches
@@ -21,12 +27,6 @@ Two principles govern everything here:
 2. NEVER add test-only methods to production classes
 3. NEVER mock without understanding dependencies
 ```
-
-Strict TDD produces all of this naturally: a test written first and watched failing against real code has already proven it can fail, and only earns a mock when the real dependency proves slow or external.
-
-## Not Everything Earns a Test
-
-Ship the tests the behavior needs and only those. Trivial code and human prose earn none; a test written to satisfy process costs maintenance forever. Constructors, getters, constants, and trivial forwarding earn tests only when they validate, normalize, default, derive, enforce, or cause side effects — otherwise assert the first consumer-visible result that depends on them.
 
 ## Principle 1: Name the Break
 
@@ -228,27 +228,9 @@ Warning signs:
 
 Integration tests with real components are often simpler than complex mocks. Ask: *"Do we need to be using a mock here?"*
 
-## Tests Ship With the Implementation
+## Watch It Fail
 
-```
-❌ "Implementation complete. No tests written. Ready for testing."
-✅ TDD cycle:
-   1. Write failing test
-   2. Implement to pass
-   3. Refactor
-   4. THEN claim complete
-```
-
-Testing is part of implementation, not an optional follow-up. You can't claim complete without tests — and only the tests the behavior needs.
-
-## TDD Prevents These Anti-Patterns
-
-1. **Write test first** → forces you to think about what you're actually testing
-2. **Watch it fail** → confirms the test tests real behavior, not mocks
-3. **Minimal implementation** → no test-only methods creep in
-4. **Real dependencies** → you see what the test actually needs before mocking
-
-If you're testing mock behavior, you violated TDD — you added mocks without watching the test fail against real code first.
+Trust a test only after you see it fail against the real code. Write it before the fix and run it, or break the code on purpose, run the test, and put the code back. A test that never failed can pass for the wrong reason.
 
 ## The Mutation Check
 
@@ -266,6 +248,7 @@ A mutation nothing catches marks the behavior as unprotected — or the test as 
 
 | When you... | Do |
 |-------------|-----|
+| Decide whether to add a test | Add one for logic that can break, or when the user asks; otherwise ship with the existing checks |
 | Write any test | Name the break it catches — a bug, not a decision |
 | Build an expected value | Derive it by hand; never with the code under test |
 | Test a script or document | Run it and assert its effects; never grep its text |
@@ -275,7 +258,6 @@ A mutation nothing catches marks the behavior as unprotected — or the test as 
 | Build a mock response | Mirror the real structure completely |
 | Need cleanup only tests use | Put it in test utilities, never production classes |
 | Watch mock setup balloon | Switch to an integration test with real components |
-| Finish implementation | Tests ship with it — TDD, not afterthought |
 | Finish a test file | Run the mutation check |
 
 ## Warning Signs
@@ -286,7 +268,8 @@ A mutation nothing catches marks the behavior as unprotected — or the test as 
 - Expected values are hidden behind loops, builders, or helpers
 - The test greps source text, or asserts a removed symbol stays removed
 - The test would still matter if only the framework remained
-- The test exists for coverage, checking no side effect or outcome
+- The test exists for coverage, to show work, or to fill a PR, and checks no side effect or outcome
+- The change under test is config, styling, copy, static data, or the output of a library
 - An assertion checks a `*-mock` test ID, or fails if you remove the mock
 - A method is called only from test files
 - Mock setup is more than half the test, or you can't explain why the mock is needed
@@ -297,4 +280,4 @@ A mutation nothing catches marks the behavior as unprotected — or the test as 
 
 **Mocks are tools to isolate, not things to test.**
 
-If TDD reveals you're testing mock behavior, you've gone wrong. Fix: test real behavior or question why you're mocking at all.
+If a test checks mock behavior, test the real behavior instead, or ask why you use a mock at all.
